@@ -6,19 +6,16 @@
 //
 
 import SwiftUI
+import Forge
 
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
+struct RendererView: View {
+  var body: some View {
+    ForgeView(renderer: RefractionAndFunRenderer())
+      .ignoresSafeArea()
+      .navigationTitle("Refraction & Fun")
+  }
 }
 
 #Preview {
-    ContentView()
+  RendererView()
 }

@@ -9,9 +9,9 @@ import SwiftUI
 
 @main
 struct RefractionAndFunApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+  var body: some Scene {
+    WindowGroup {
+      RendererView()
     }
+  }
 }
