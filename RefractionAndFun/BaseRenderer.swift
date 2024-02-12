@@ -28,13 +28,7 @@ class BaseRenderer: Forge.Renderer {
   
   // MARK: - Parameters
   
-  var paramKeys: [String] {
-    return []
-  }
-  
-  var params: [String: ParameterGroup?] {
-    return [:]
-  }
+  var params: [String: ParameterGroup?] = [:]
   
   override func preDraw() -> MTLCommandBuffer? {
     updateInspector()
@@ -56,7 +50,7 @@ class BaseRenderer: Forge.Renderer {
 
 extension BaseRenderer {
   func setupInspector() {
-    guard !paramKeys.isEmpty else { return }
+    guard !params.isEmpty else { return }
     
     var panelOpenStates: [String: Bool] = [:]
     if let inspectorWindow = self.inspectorWindow, let inspector = inspectorWindow.inspectorViewController {
@@ -98,9 +92,8 @@ extension BaseRenderer {
   }
   
   func updateUI(_ inspectorViewController: InspectorViewController) {
-    let paramters = params
-    for key in paramKeys {
-      if let param = paramters[key], let p = param {
+    for key in params.keys {
+      if let param = params[key], let p = param {
         let panel = PanelViewController(key, parameters: p)
         inspectorViewController.addPanel(panel)
       }
