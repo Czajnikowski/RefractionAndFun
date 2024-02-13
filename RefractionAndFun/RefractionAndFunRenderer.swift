@@ -12,19 +12,33 @@ import MetalKit
 class RefractionAndFunRenderer: BaseRenderer {
   enum ParamKey: String {
     case material
+    case position
   }
   
   lazy var icosahedron: Mesh = {
     let material = BasicDiffuseMaterial(0.7)
     params[ParamKey.material.rawValue] = material.parameters
-    
-    return Mesh(
+     
+    let mesh = Mesh(
       geometry: IcoSphereGeometry(radius: 1.0, res: 2),
       material: material
     )
+    params[ParamKey.position.rawValue] = mesh.positionParameters
+    
+    return mesh
   }()
   
-  lazy var scene = Object("Scene", [icosahedron])
+  var intersectionMesh: Mesh = {
+    let mesh = Mesh(
+      geometry: IcoSphereGeometry(radius: 0.01, res: 2),
+      material: BasicColorMaterial([0.0, 1.0, 0.0, 1.0], .disabled)
+    )
+    
+    mesh.label = "Intersection Mesh"
+    mesh.visible = false
+    return mesh
+  }()
+  lazy var scene = Object("Scene", [icosahedron, intersectionMesh, Object.makeGrid()])
   lazy var context = Context(device, sampleCount, colorPixelFormat, depthPixelFormat, stencilPixelFormat)
   lazy var camera = PerspectiveCamera(position: .init(repeating: 5.0), near: 0.01, far: 100.0, fov: 30)
   lazy var cameraController = PerspectiveCameraController(camera: camera, view: mtkView)
@@ -82,6 +96,8 @@ class RefractionAndFunRenderer: BaseRenderer {
     if let result = results.first {
       //            print(result.object.label)
       //            print(result.position)
+      intersectionMesh.position = result.position
+      intersectionMesh.visible = true
     }
   }
   
