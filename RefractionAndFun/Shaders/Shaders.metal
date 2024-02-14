@@ -30,7 +30,7 @@ typedef struct {
 typedef struct {
   float4 position [[position]];
   float3 eye;
-  float3 normal;
+  float3 surfaceNormal;
 } CustomVertexData;
 
 vertex CustomVertexData vertexFunction(
@@ -41,7 +41,7 @@ vertex CustomVertexData vertexFunction(
   return CustomVertexData {
     .position = uniforms.modelViewProjectionMatrix * modelPosition,
     .eye = normalize((uniforms.modelMatrix * modelPosition).xyz - uniforms.worldCameraPosition),
-    .normal = normalize(in.normal * uniforms.normalMatrix)
+    .surfaceNormal = normalize(in.normal * uniforms.normalMatrix)
   };
 }
 
@@ -54,11 +54,21 @@ fragment float4 fragmentFunction(
   constant FragmentUniforms &uniforms [[buffer(0)]],
   texture2d<float, access::sample> backgroundTexture [[texture(0)]]
 ) {
+  float rIoR = 1.3;
+  float gIoR = 1.2996;
+  float bIoR = 1.3017443;
+  
   float2 resolution = float2(backgroundTexture.get_width(), backgroundTexture.get_height());
   float2 uv = in.position.xy / resolution;
-  float3 refraction = refract(in.eye, in.normal, 1.0 / 1.3);
+  
+  float3 rRefraction = refract(in.eye, in.surfaceNormal, 1.0 / rIoR);
+  float3 gRefraction = refract(in.eye, in.surfaceNormal, 1.0 / gIoR);
+  float3 bRefraction = refract(in.eye, in.surfaceNormal, 1.0 / bIoR);
 
   constexpr sampler s;
-  const float4 backgroundSample = backgroundTexture.sample(s, uv - refraction.xy);
-  return backgroundSample;
+  const float4 rBackgroundSample = backgroundTexture.sample(s, uv - rRefraction.xy);
+  const float4 gBackgroundSample = backgroundTexture.sample(s, uv - gRefraction.xy);
+  const float4 bBackgroundSample = backgroundTexture.sample(s, uv - bRefraction.xy);
+  
+  return float4(rBackgroundSample.x, gBackgroundSample.y, bBackgroundSample.z, 1);
 }
