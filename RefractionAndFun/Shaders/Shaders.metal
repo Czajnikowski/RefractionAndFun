@@ -54,9 +54,9 @@ fragment float4 fragmentFunction(
   constant FragmentUniforms &uniforms [[buffer(0)]],
   texture2d<float, access::sample> backgroundTexture [[texture(0)]]
 ) {
-  float rIoR = 1.3;
-  float gIoR = 1.2996;
-  float bIoR = 1.3017443;
+  float rIoR = 1.29768;
+  float gIoR = 1.3;
+  float bIoR = 1.3054;
   
   float2 resolution = float2(backgroundTexture.get_width(), backgroundTexture.get_height());
   float2 uv = in.position.xy / resolution;
@@ -64,11 +64,27 @@ fragment float4 fragmentFunction(
   float3 rRefraction = refract(in.eye, in.surfaceNormal, 1.0 / rIoR);
   float3 gRefraction = refract(in.eye, in.surfaceNormal, 1.0 / gIoR);
   float3 bRefraction = refract(in.eye, in.surfaceNormal, 1.0 / bIoR);
-
-  constexpr sampler s;
-  const float4 rBackgroundSample = backgroundTexture.sample(s, uv - rRefraction.xy);
-  const float4 gBackgroundSample = backgroundTexture.sample(s, uv - gRefraction.xy);
-  const float4 bBackgroundSample = backgroundTexture.sample(s, uv - bRefraction.xy);
   
-  return float4(rBackgroundSample.x, gBackgroundSample.y, bBackgroundSample.z, 1);
+  float3x2 refractedUV = float3x2(
+    uv - rRefraction.xy,
+    uv - gRefraction.xy,
+    uv - bRefraction.xy
+  );
+  
+  constexpr sampler s;
+
+  const float dispersionSampleCount = 10;
+
+  float3 color = 0;
+  for (float dispersionSampleIndex = 0; dispersionSampleIndex < dispersionSampleCount; dispersionSampleIndex++) {
+    const float dispersionOffset = dispersionSampleIndex / dispersionSampleCount * 0.01;
+    
+    color.r += backgroundTexture.sample(s, refractedUV[0] + dispersionOffset).r;
+    color.g += backgroundTexture.sample(s, refractedUV[1] + dispersionOffset).g;
+    color.b += backgroundTexture.sample(s, refractedUV[2] + dispersionOffset).b;
+  }
+  
+  color /= dispersionSampleCount;
+  
+  return float4(color, 1);
 }
