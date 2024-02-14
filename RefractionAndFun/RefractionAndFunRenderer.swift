@@ -67,26 +67,35 @@ class RefractionAndFunRenderer: BaseRenderer {
   }
   
   override func update() {
-    backgroundTexture = createTexture("Background", mtkView.colorPixelFormat)
+    if backgroundTexture == nil {
+      backgroundTexture = createTexture("Background", mtkView.colorPixelFormat)
+    }
     cameraController.update()
   }
   
   override func draw(_ view: MTKView, _ commandBuffer: MTLCommandBuffer) {
     guard let renderPassDescriptor = view.currentRenderPassDescriptor else { return }
-    guard let texture = backgroundTexture else { return }
+    guard let backgroundTexture else { return }
     
     foreground.visible = false
+    
     renderer.draw(
       renderPassDescriptor: renderPassDescriptor,
       commandBuffer: commandBuffer,
       scene: scene,
       camera: camera,
-      renderTarget: texture
+      renderTarget: backgroundTexture
     )
     
-    foreground.material = BasicTextureMaterial(texture: texture)
-    
+    let funMaterial = BasicTextureMaterial(texture: backgroundTexture)
+    funMaterial.shader = Shader(
+      "ForegroundMaterialShader",
+      "vertexFunction",
+      "fragmentFunction"
+    )
+    foreground.material = funMaterial
     foreground.visible = true
+    
     renderer.draw(
       renderPassDescriptor: renderPassDescriptor,
       commandBuffer: commandBuffer,
