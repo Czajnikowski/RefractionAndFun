@@ -38,7 +38,7 @@ class RefractionAndFunRenderer: BaseRenderer {
   
   let foreground: Mesh = {
     let mesh = Mesh(
-      geometry: IcoSphereGeometry(radius: 2, res: 3),
+      geometry: IcoSphereGeometry(radius: 2, res: 5),
       material: nil
     )
     mesh.position = [0, 0, -3]

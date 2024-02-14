@@ -45,9 +45,27 @@ vertex CustomVertexData vertexFunction(
   };
 }
 
-typedef struct {
-  float2 resolution;
-} FragmentUniforms;
+typedef struct {} FragmentUniforms;
+
+float3 sat(float3 rgb, float intensity) {
+  float3 L = float3(0.2125, 0.7154, 0.0721);
+  float3 luma = float3(dot(rgb, L));
+  return mix(luma, rgb, intensity);
+}
+
+float specular(float3 eye, float3 normal, float3 light, float shininess, float diffuseness) {
+  float3 lightVector = normalize(-light);
+  float3 halfVector = normalize(eye + lightVector);
+
+  float NdotL = dot(normal, lightVector);
+  float NdotH =  dot(normal, halfVector);
+  float NdotH2 = NdotH * NdotH;
+
+  float kDiffuse = max(0.0, NdotL);
+  float kSpecular = pow(NdotH2, shininess);
+
+  return  kSpecular + kDiffuse * diffuseness;
+}
 
 fragment float4 fragmentFunction(
   CustomVertexData in [[stage_in]],
@@ -65,26 +83,27 @@ fragment float4 fragmentFunction(
   float3 gRefraction = refract(in.eye, in.surfaceNormal, 1.0 / gIoR);
   float3 bRefraction = refract(in.eye, in.surfaceNormal, 1.0 / bIoR);
   
-  float3x2 refractedUV = float3x2(
-    uv - rRefraction.xy,
-    uv - gRefraction.xy,
-    uv - bRefraction.xy
-  );
-  
+  float2 rRefractedUV = uv - rRefraction.xy;
+  float2 gRefractedUV = uv - gRefraction.xy;
+  float2 bRefractedUV = uv - bRefraction.xy;
+
   constexpr sampler s;
 
   const float dispersionSampleCount = 10;
 
   float3 color = 0;
   for (float dispersionSampleIndex = 0; dispersionSampleIndex < dispersionSampleCount; dispersionSampleIndex++) {
-    const float dispersionOffset = dispersionSampleIndex / dispersionSampleCount * 0.01;
+    const float dispersionOffset = dispersionSampleIndex / dispersionSampleCount * 0.014;
     
-    color.r += backgroundTexture.sample(s, refractedUV[0] + dispersionOffset).r;
-    color.g += backgroundTexture.sample(s, refractedUV[1] + dispersionOffset).g;
-    color.b += backgroundTexture.sample(s, refractedUV[2] + dispersionOffset).b;
+    float r = backgroundTexture.sample(s, rRefractedUV + dispersionOffset).r;
+    float g = backgroundTexture.sample(s, gRefractedUV + dispersionOffset).g;
+    float b = backgroundTexture.sample(s, bRefractedUV + dispersionOffset).b;
+    
+    color += float3(r, g, b);
   }
-  
   color /= dispersionSampleCount;
   
-  return float4(color, 1);
+  color += specular(-in.eye, in.surfaceNormal, float3(2, -2, -1.0), 40, 0.02);
+  
+  return float4(sat(color, 2), 1);
 }
