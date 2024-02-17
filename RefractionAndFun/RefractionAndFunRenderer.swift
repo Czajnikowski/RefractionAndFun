@@ -73,11 +73,21 @@ class RefractionAndFunRenderer: BaseRenderer {
     cameraController.update()
   }
   
+  let date = Date()
+  
   override func draw(_ view: MTKView, _ commandBuffer: MTLCommandBuffer) {
     guard let renderPassDescriptor = view.currentRenderPassDescriptor else { return }
     guard let backgroundTexture else { return }
     
     foreground.visible = false
+    
+    let interval = Float(date.timeIntervalSince(Date()))
+    camera.position = .init(
+      sin(interval / .pi) * 7,
+      cos(interval / 2) * 7,
+      10 - (sin(interval) + 1) * 2
+    )
+    camera.lookAt(target: .init(repeating: 0))
     
     renderer.draw(
       renderPassDescriptor: renderPassDescriptor,
