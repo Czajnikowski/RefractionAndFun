@@ -100,9 +100,9 @@ fragment float4 fragmentFunction(
   constant FragmentUniforms &uniforms [[buffer(0)]],
   texture2d<float, access::sample> backgroundTexture [[texture(0)]]
 ) {
-  float rIoR = 1.2768;
-  float gIoR = 1.3;
-  float bIoR = 1.33054;
+  float rIoR = 1.6768;
+  float gIoR = 1.7;
+  float bIoR = 1.73054;
   
   float2 resolution = float2(backgroundTexture.get_width(), backgroundTexture.get_height());
   float2 uv = in.position.xy / resolution;
@@ -144,7 +144,7 @@ fragment float4 fragmentFunction(
   );
   
   float2 intersectionUV = intersectionWithBackground.xy / resolution;
-  float fresnelRatio = fresnel(in.eye, in.surfaceNormal, 4);
+  float fresnelRatio = fresnel(in.eye, in.surfaceNormal, 6);
   color.rgb = mix(
     color,
     backgroundTexture.sample(s, intersectionUV).rgb * step(0, reflectionRay.z)

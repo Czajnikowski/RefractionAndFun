@@ -19,7 +19,7 @@ class RefractionAndFunRenderer: BaseRenderer {
       amountInOneDimensionRange.flatMap { row in
         amountInOneDimensionRange.map { column in
           let mesh = Mesh(
-            geometry: IcoSphereGeometry(radius: 0.22, res: 2),
+            geometry: IcoSphereGeometry(radius: 0.22, res: 3),
             material: BasicDiffuseMaterial(0.7)
           )
           let centerOffset = Float(numberOfSpheres - 1) / 2
@@ -38,7 +38,7 @@ class RefractionAndFunRenderer: BaseRenderer {
   
   let foreground: Mesh = {
     let mesh = Mesh(
-      geometry: IcoSphereGeometry(radius: 2, res: 5),
+      geometry: IcoSphereGeometry(radius: 2.2, res: 5),
       material: nil
     )
     mesh.position = [0, 0, -3]
@@ -81,13 +81,13 @@ class RefractionAndFunRenderer: BaseRenderer {
     
     foreground.visible = false
     
-    let interval = Float(date.timeIntervalSince(Date()))
+    let interval = Float(date.timeIntervalSince(Date())) * 0.03647301
     camera.position = .init(
-      sin(interval / .pi) * 7,
-      cos(interval / 2) * 7,
-      10 - (sin(interval) + 1) * 2
+      sin(interval * 12) * 6,
+      cos(interval * 4) * 6,
+      12 - (sin(interval * 3) + 1) * 2
     )
-    camera.lookAt(target: .init(repeating: 0))
+    camera.lookAt(target: .init(0, 0, 3))
     
     renderer.draw(
       renderPassDescriptor: renderPassDescriptor,
