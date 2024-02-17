@@ -14,17 +14,18 @@ typedef struct {
 } VertexInput;
 
 typedef struct {
-    float4x4 modelMatrix;
-    float4x4 viewMatrix;
-    float4x4 modelViewMatrix;
-    float4x4 projectionMatrix;
-    float4x4 viewProjectionMatrix;
-    float4x4 modelViewProjectionMatrix;
-    float4x4 inverseModelViewProjectionMatrix;
-    float4x4 inverseViewMatrix;
-    float3x3 normalMatrix;
-    float4 viewport;
-    float3 worldCameraPosition;
+  metal::float4x4 modelMatrix;
+  metal::float4x4 viewMatrix;
+  metal::float4x4 modelViewMatrix;
+  metal::float4x4 projectionMatrix;
+  metal::float4x4 viewProjectionMatrix;
+  metal::float4x4 modelViewProjectionMatrix;
+  metal::float4x4 inverseModelViewProjectionMatrix;
+  metal::float4x4 inverseViewMatrix;
+  metal::float3x3 normalMatrix;
+  float4 viewport;
+  float3 worldCameraPosition;
+  float3 worldCameraViewDirection;
 } VertexUniforms;
 
 typedef struct {
@@ -47,13 +48,22 @@ vertex CustomVertexData vertexFunction(
 
 typedef struct {} FragmentUniforms;
 
-float3 sat(float3 rgb, float intensity) {
+float3 sat(
+  float3 rgb,
+  float intensity
+) {
   float3 L = float3(0.2125, 0.7154, 0.0721);
   float3 luma = float3(dot(rgb, L));
   return mix(luma, rgb, intensity);
 }
 
-float specular(float3 eye, float3 normal, float3 light, float shininess, float diffuseness) {
+float specular(
+  float3 eye,
+  float3 normal,
+  float3 light,
+  float shininess,
+  float diffuseness
+) {
   float3 lightVector = normalize(-light);
   float3 halfVector = normalize(eye + lightVector);
 
@@ -67,32 +77,54 @@ float specular(float3 eye, float3 normal, float3 light, float shininess, float d
   return  kSpecular + kDiffuse * diffuseness;
 }
 
+float fresnel(
+  float3 eye,
+  float3 normal,
+  float power
+) {
+  float fresnelFactor = abs(dot(eye, normal));
+  float inverseFresnelFactor = 1.0 - fresnelFactor;
+
+  return pow(inverseFresnelFactor, power);
+}
+
+float3 intersect(float3 planeP, float3 planeN, float3 rayP, float3 rayD)
+{
+    float d = dot(planeP, -planeN);
+    float t = -(d + dot(rayP, planeN)) / dot(rayD, planeN);
+    return rayP + t * rayD;
+}
+
 fragment float4 fragmentFunction(
   CustomVertexData in [[stage_in]],
   constant FragmentUniforms &uniforms [[buffer(0)]],
   texture2d<float, access::sample> backgroundTexture [[texture(0)]]
 ) {
-  float rIoR = 1.29768;
+  float rIoR = 1.2768;
   float gIoR = 1.3;
-  float bIoR = 1.3054;
+  float bIoR = 1.33054;
   
   float2 resolution = float2(backgroundTexture.get_width(), backgroundTexture.get_height());
   float2 uv = in.position.xy / resolution;
   
-  float3 rRefraction = refract(in.eye, in.surfaceNormal, 1.0 / rIoR);
-  float3 gRefraction = refract(in.eye, in.surfaceNormal, 1.0 / gIoR);
-  float3 bRefraction = refract(in.eye, in.surfaceNormal, 1.0 / bIoR);
+  float3 rRefraction = refract(in.eye, in.surfaceNormal, 1.0 / rIoR) * 0.2;
+  float3 gRefraction = refract(in.eye, in.surfaceNormal, 1.0 / gIoR) * 0.2;
+  float3 bRefraction = refract(in.eye, in.surfaceNormal, 1.0 / bIoR) * 0.2;
   
   float2 rRefractedUV = uv - rRefraction.xy;
   float2 gRefractedUV = uv - gRefraction.xy;
   float2 bRefractedUV = uv - bRefraction.xy;
 
   constexpr sampler s;
-
+  
   const float dispersionSampleCount = 10;
 
   float3 color = 0;
-  for (float dispersionSampleIndex = 0; dispersionSampleIndex < dispersionSampleCount; dispersionSampleIndex++) {
+  for (
+    float dispersionSampleIndex = 0;
+    dispersionSampleIndex < dispersionSampleCount;
+    dispersionSampleIndex += 1
+  ) {
     const float dispersionOffset = dispersionSampleIndex / dispersionSampleCount * 0.014;
     
     float r = backgroundTexture.sample(s, rRefractedUV + dispersionOffset).r;
@@ -102,8 +134,23 @@ fragment float4 fragmentFunction(
     color += float3(r, g, b);
   }
   color /= dispersionSampleCount;
+     
+  float3 reflection = reflect(in.eye, in.surfaceNormal);
+  float3 reflectionOrigin = float3(in.position.xy, -0.075);
+  float3 reflectionRay = reflectionOrigin + reflection;
+  float3 intersectionWithBackground = intersect(
+    0, normalize(float3(0,0,-1)),
+    reflectionOrigin, reflectionRay
+  );
   
-  color += specular(-in.eye, in.surfaceNormal, float3(2, -2, -1.0), 40, 0.02);
+  float2 intersectionUV = intersectionWithBackground.xy / resolution;
+  float fresnelRatio = fresnel(in.eye, in.surfaceNormal, 4);
+  color.rgb = mix(
+    color,
+    backgroundTexture.sample(s, intersectionUV).rgb * step(0, reflectionRay.z)
+      + specular(-in.eye, in.surfaceNormal, float3(2, -2, -1.0), 40, 0.02),
+    fresnelRatio
+  );
   
-  return float4(sat(color, 2), 1);
+  return float4(sat(color, 4), 1);
 }
